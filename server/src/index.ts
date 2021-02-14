@@ -51,7 +51,7 @@ const main = async () => {
 
 	apolloServer.applyMiddleware({ app });
 
-	app.listen(3000, () => {
+	app.listen(4000, () => {
 		console.log('Server started at 3000');
 	});
 	app.get('/', (_, response) => {
