@@ -4,7 +4,6 @@ import {
 	Arg,
 	Ctx,
 	Field,
-	InputType,
 	Mutation,
 	ObjectType,
 	Query,
@@ -12,14 +11,9 @@ import {
 } from 'type-graphql';
 import argon2 from 'argon2';
 import { COOKIE_NAME } from '../constants';
-
-@InputType()
-class UserNamePasswordInput {
-	@Field()
-	username: string;
-	@Field()
-	password: string;
-}
+import { UserNamePasswordInput } from './UserNamePasswordInput';
+import { validateRegister } from '../utils/validateRegister';
+import { EntityManager } from '@mikro-orm/postgresql';
 
 @ObjectType()
 class FieldError {
@@ -40,6 +34,12 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+	// @Mutation(() => Boolean)
+	// async forgotPassword(@Arg('email') email: string, @Ctx() { em }: MyContext) {
+	// 	// const user = await em.findOne(User, { email });
+	// 	return true;
+	// }
+
 	@Query(() => User, { nullable: true })
 	async me(@Ctx() { req, em }: MyContext) {
 		// Query to check who the user is
@@ -55,34 +55,31 @@ export class UserResolver {
 		@Arg('options') options: UserNamePasswordInput,
 		@Ctx() { em }: MyContext
 	): Promise<UserResponse> {
-		if (options.username.length <= 2) {
-			return {
-				errors: [
-					{
-						field: 'username',
-						message: 'Username should have at least 3 characters',
-					},
-				],
-			};
-		}
-
-		if (options.password.length <= 2) {
-			return {
-				errors: [
-					{
-						field: 'password',
-						message: 'Password should have at least 3 characters',
-					},
-				],
-			};
+		const errors = validateRegister(options);
+		if (errors) {
+			return { errors };
 		}
 		const hashedPassword = await argon2.hash(options.password);
-		const user = em.create(User, {
-			username: options.username,
-			password: hashedPassword,
-		});
+		// const user = em.create(User, {
+		// 	username: options.username,
+		// 	password: hashedPassword,
+		// 	email: options.email,
+		// });
+
+		let user;
 		try {
-			await em.persistAndFlush(user);
+			const result = await (em as EntityManager)
+				.createQueryBuilder(User)
+				.getKnexQuery()
+				.insert({
+					username: options.username,
+					email: options.email,
+					password: hashedPassword,
+					created_at: new Date(),
+					updated_at: new Date(),
+				})
+				.returning('*');
+			user = result[0];
 		} catch (err) {
 			if (err.code === '23505') {
 				// Duplicate user error
@@ -96,19 +93,22 @@ export class UserResolver {
 
 	@Mutation(() => UserResponse)
 	async login(
-		@Arg('options') options: UserNamePasswordInput,
+		@Arg('usernameOrEmail') usernameOrEmail: string,
+		@Arg('password') password: string,
 		@Ctx() { em, req }: MyContext
 	): Promise<UserResponse> {
-		const user = await em.findOne(User, { username: options.username });
+		const user = await em.findOne(
+			User,
+			usernameOrEmail.includes('@')
+				? { email: usernameOrEmail }
+				: { username: usernameOrEmail }
+		);
 		if (!user) {
 			return {
 				errors: [{ field: 'username', message: `Username does not exist` }],
 			};
 		}
-		const isValidPassword = await argon2.verify(
-			user!.password,
-			options.password
-		);
+		const isValidPassword = await argon2.verify(user!.password, password);
 		if (!isValidPassword) {
 			return { errors: [{ field: 'password', message: `Invalid password` }] };
 		}
