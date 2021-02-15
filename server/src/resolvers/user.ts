@@ -10,10 +10,12 @@ import {
 	Resolver,
 } from 'type-graphql';
 import argon2 from 'argon2';
-import { COOKIE_NAME } from '../constants';
+import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from '../constants';
 import { UserNamePasswordInput } from './UserNamePasswordInput';
 import { validateRegister } from '../utils/validateRegister';
 import { EntityManager } from '@mikro-orm/postgresql';
+import { sendEmail } from '../utils/sendEmail';
+import { v4 } from 'uuid';
 
 @ObjectType()
 class FieldError {
@@ -34,11 +36,27 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
-	// @Mutation(() => Boolean)
-	// async forgotPassword(@Arg('email') email: string, @Ctx() { em }: MyContext) {
-	// 	// const user = await em.findOne(User, { email });
-	// 	return true;
-	// }
+	@Mutation(() => Boolean)
+	async forgotPassword(
+		@Arg('email') email: string,
+		@Ctx() { em, redis }: MyContext
+	) {
+		const user = await em.findOne(User, { email });
+		if (!user) {
+			// The email is not in the database
+			return true;
+		}
+		const token = v4();
+		await redis.set(
+			FORGET_PASSWORD_PREFIX + token,
+			user.id,
+			'ex',
+			1000 * 60 * 60 * 24 * 3 // three days
+		);
+		const html = `<a href='http://localhost:3000/change-password/${token}'>Reset password</a>`;
+		await sendEmail(email, html);
+		return true;
+	}
 
 	@Query(() => User, { nullable: true })
 	async me(@Ctx() { req, em }: MyContext) {
@@ -105,7 +123,12 @@ export class UserResolver {
 		);
 		if (!user) {
 			return {
-				errors: [{ field: 'username', message: `Username does not exist` }],
+				errors: [
+					{
+						field: 'usernameOrEmail',
+						message: `Username or email does not exist`,
+					},
+				],
 			};
 		}
 		const isValidPassword = await argon2.verify(user!.password, password);
