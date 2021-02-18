@@ -81,7 +81,7 @@ export class UserResolver {
 		user.password = await argon2.hash(newPassword);
 		await em.persistAndFlush(user);
 
-		req.session.userId = userId;
+		(req.session as any).userId = userId;
 
 		return { user };
 	}
