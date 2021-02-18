@@ -37,8 +37,8 @@ class UserResponse {
 @Resolver()
 export class UserResolver {
 	@Mutation(() => UserResponse)
-	async changePassord(
-		@Arg('toekn') token: string,
+	async changePassword(
+		@Arg('token') token: string,
 		@Arg('newPassword') newPassword: string,
 		@Ctx() { redis, em, req }: MyContext
 	): Promise<UserResponse> {
