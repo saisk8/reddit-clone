@@ -20,7 +20,7 @@ import { Post } from './entities/Post';
 const main = async () => {
 	// sendEmail('bob@example.com', 'Hello there');
 	// Data base connection
-	const conn = await createConnection({
+	await createConnection({
 		type: 'postgres',
 		database: 'lireddit2',
 		username: 'knight',
@@ -74,7 +74,7 @@ const main = async () => {
 	});
 
 	app.listen(4000, () => {
-		console.log('Server started at 3000');
+		console.log('Server started at 4000');
 	});
 	app.get('/', (_, response) => {
 		response.send('Hello');
