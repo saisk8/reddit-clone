@@ -11,11 +11,10 @@ import { createUrqlClient } from '../../utils/createUrqlClient';
 import { toErrorMap } from '../../utils/toErrorMap';
 import NextLink from 'next/link';
 
-export const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
+export const ChangePassword: NextPage = () => {
 	const [, changePassword] = useChangePasswordMutation();
 	const router = useRouter();
 	const [tokenError, setTokenError] = useState('');
-	console.log(token);
 	return (
 		<Wrapper variant='small'>
 			<Formik
@@ -23,13 +22,12 @@ export const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
 				onSubmit={async (values, { setErrors }) => {
 					const respone = await changePassword({
 						newPassword: values.newPassword,
-						token,
+						token:
+							typeof router.query.token === 'string' ? router.query.token : '',
 					});
 					if (respone.data?.changePassword.errors) {
 						const errorMap = toErrorMap(respone.data.changePassword.errors);
-						console.log('token', errorMap);
 						if (errorMap.token.includes('Token')) {
-							console.log('here');
 							setTokenError(errorMap.token);
 						} else {
 							setErrors(errorMap);
@@ -76,12 +74,6 @@ export const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
 			</Formik>
 		</Wrapper>
 	);
-};
-
-ChangePassword.getInitialProps = ({ query }) => {
-	return {
-		token: query.token as string,
-	};
 };
 
 export default withUrqlClient(createUrqlClient)(ChangePassword);
