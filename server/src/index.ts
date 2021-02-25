@@ -15,19 +15,20 @@ import { MyContext } from './types';
 import cors from 'cors';
 import { User } from './entities/User';
 import { Post } from './entities/Post';
-// import { sendEmail } from './utils/sendEmail';
+import path from 'path';
 
 const main = async () => {
-	// sendEmail('bob@example.com', 'Hello there');
 	// Data base connection
-	await createConnection({
+	const conn = await createConnection({
 		type: 'postgres',
 		database: 'lireddit2',
 		username: 'knight',
 		logging: true,
 		synchronize: true,
+		migrations: [path.join(__dirname, './migrations/*')],
 		entities: [Post, User],
 	});
+	conn.runMigrations();
 
 	// Express connection
 	const app = express();
