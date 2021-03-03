@@ -4,10 +4,12 @@ import {
 	Arg,
 	Ctx,
 	Field,
+	FieldResolver,
 	Mutation,
 	ObjectType,
 	Query,
 	Resolver,
+	Root,
 } from 'type-graphql';
 import argon2 from 'argon2';
 import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from '../constants';
@@ -34,8 +36,15 @@ class UserResponse {
 	user?: User;
 }
 
-@Resolver()
+@Resolver(User)
 export class UserResolver {
+	@FieldResolver(() => String)
+	email(@Root() user: User, @Ctx() { req }: MyContext) {
+		if ((req.session as any).userId === user.id) {
+			return user.email;
+		}
+		return '';
+	}
 	@Mutation(() => UserResponse)
 	async changePassword(
 		@Arg('token') token: string,
@@ -116,6 +125,7 @@ export class UserResolver {
 	@Query(() => User, { nullable: true })
 	async me(@Ctx() { req }: MyContext) {
 		// Query to check who the user is
+		console.log(req.session);
 		if (!(req.session as any).userId) {
 			return null;
 		}
@@ -124,19 +134,14 @@ export class UserResolver {
 
 	@Mutation(() => UserResponse)
 	async register(
-		@Arg('options') options: UserNamePasswordInput
+		@Arg('options') options: UserNamePasswordInput,
+		@Ctx() { req }: MyContext
 	): Promise<UserResponse> {
 		const errors = validateRegister(options);
 		if (errors) {
 			return { errors };
 		}
 		const hashedPassword = await argon2.hash(options.password);
-		// const user = em.create(User, {
-		// 	username: options.username,
-		// 	password: hashedPassword,
-		// 	email: options.email,
-		// });
-
 		let user;
 		try {
 			const result = await getConnection()
@@ -159,6 +164,7 @@ export class UserResolver {
 				};
 			}
 		}
+		(req.session as any).userId = user.id;
 		return { user };
 	}
 
@@ -178,17 +184,18 @@ export class UserResolver {
 				errors: [
 					{
 						field: 'usernameOrEmail',
-						message: `Username or email does not exist`,
+						message: 'Username or email does not exist',
 					},
 				],
 			};
 		}
 		const isValidPassword = await argon2.verify(user!.password, password);
 		if (!isValidPassword) {
-			return { errors: [{ field: 'password', message: `Invalid password` }] };
+			return { errors: [{ field: 'password', message: 'Invalid password' }] };
 		}
 		(req.session as any).userId = user.id;
-		return { user: user! };
+		console.log(req.session);
+		return { user };
 	}
 
 	@Mutation(() => Boolean)
