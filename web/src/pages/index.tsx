@@ -1,13 +1,11 @@
-import { ChevronUpIcon, ChevronDownIcon } from '@chakra-ui/icons';
 import {
+	Box,
+	Button,
+	Flex,
+	Heading,
 	Link,
 	Stack,
-	Box,
-	Heading,
 	Text,
-	Flex,
-	Button,
-	IconButton,
 } from '@chakra-ui/react';
 import { withUrqlClient } from 'next-urql';
 import NextLink from 'next/link';
