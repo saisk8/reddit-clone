@@ -53,6 +53,7 @@ export class PostResolver {
 		@Ctx() { updootLoader, req }: MyContext
 	) {
 		if (!(req.session as any).userId) {
+			console.log('In vote status:', req.session);
 			return null;
 		}
 
@@ -74,7 +75,7 @@ export class PostResolver {
 		const isUpdoot = value !== -1;
 		const realValue = isUpdoot ? 1 : -1;
 		const { userId } = req.session as any;
-
+		console.log('Userid from vote', userId);
 		const updoot = await Updoot.findOne({ where: { postId, userId } });
 
 		// the user has voted on the post before
@@ -128,7 +129,7 @@ export class PostResolver {
 		@Arg('limit', () => Int) limit: number,
 		@Arg('cursor', () => String, { nullable: true }) cursor: string | null
 	): Promise<PaginatedPosts> {
-		const realLimit = Math.min(50, limit) + 1;
+		const realLimit = Math.min(50, limit);
 		const psuedoRealLimit = realLimit + 1;
 		const replacements: any[] = [psuedoRealLimit];
 
@@ -138,33 +139,15 @@ export class PostResolver {
 
 		const posts = await getConnection().query(
 			`
-		select p.*,
-		json_build_object(
-			'id', u.id,
-			'username', u.username,
-			'email', u.email
-			) creator
+		select p.*
 		from post p
-		inner join public.user u on u.id = p."creatorId"
-		${cursor ? `where p."createdAt" < $2` : ''}
+		${cursor ? `where p."createdAt" < $3` : ''}
 		order by p."createdAt" DESC
 		limit $1
 		`,
 			replacements
 		);
 
-		// const queryBuilder = getConnection()
-		// 	.getRepository(Post)
-		// 	.createQueryBuilder('p')
-		// 	.innerJoinAndSelect('p.creator', 'u', 'u.id = p."creatorID"')
-		// 	.orderBy('p."createdAt"', 'DESC')
-		// 	.take(psuedoRealLimit);
-		// if (cursor)
-		// 	queryBuilder.where('p."createdAt" < :cursor', {
-		// 		cursor: new Date(parseInt(cursor)),
-		// 	});
-		// const posts = await queryBuilder.getMany();
-		// console.log(posts);
 		return {
 			posts: posts.slice(0, realLimit),
 			hasMore: posts.length === psuedoRealLimit,
