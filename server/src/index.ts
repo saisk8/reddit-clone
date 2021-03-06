@@ -7,7 +7,7 @@ import { HelloResolver } from './resolvers/hello';
 import { PostResolver } from './resolvers/posts';
 import { UserResolver } from './resolvers/user';
 import { createConnection } from 'typeorm';
-
+import 'dotenv-safe/config';
 import Redis from 'ioredis';
 import session from 'express-session';
 import connectRedis from 'connect-redis';
@@ -24,8 +24,7 @@ const main = async () => {
 	// Data base connection
 	const conn = await createConnection({
 		type: 'postgres',
-		database: 'lireddit2',
-		username: 'knight',
+		url: process.env.DATABASE_URL,
 		logging: true,
 		synchronize: true,
 		migrations: [path.join(__dirname, './migrations/*')],
@@ -38,11 +37,11 @@ const main = async () => {
 	const app = express();
 
 	const RedisStore = connectRedis(session);
-	const redis = new Redis();
+	const redis = new Redis(process.env.REDIS_URL);
 
 	app.use(
 		cors({
-			origin: 'http://localhost:3000',
+			origin: process.env.CORS_ORIGIN,
 			credentials: true,
 		})
 	);
@@ -57,7 +56,7 @@ const main = async () => {
 				sameSite: 'lax', // csrf
 			},
 			saveUninitialized: false,
-			secret: 'keyboard cat',
+			secret: process.env.SESSION_SECRET as string,
 			resave: false,
 		})
 	);
@@ -84,7 +83,7 @@ const main = async () => {
 		},
 	});
 
-	app.listen(4000, () => {
+	app.listen(process.env.PORT, () => {
 		console.log('Server started at 4000');
 	});
 	app.get('/', (_, response) => {
