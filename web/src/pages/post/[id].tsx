@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import { usePostQuery } from '../../generated/graphql';
 import { createUrqlClient } from '../../utils/createUrqlClient';
+import { EditDeletePostButtons } from '../../components/EditDeletePostButtons';
 
 export const Post = ({}) => {
 	const router = useRouter();
@@ -33,6 +34,10 @@ export const Post = ({}) => {
 		<Layout>
 			<Heading mb={4}>{data?.post?.title}</Heading>
 			<Box mb={4}>{data?.post?.text}</Box>
+			<EditDeletePostButtons
+				id={data.post.id}
+				creatorId={data.post.creator.id}
+			/>
 		</Layout>
 	);
 };
