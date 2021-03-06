@@ -53,7 +53,6 @@ export class PostResolver {
 		@Ctx() { updootLoader, req }: MyContext
 	) {
 		if (!(req.session as any).userId) {
-			console.log('In vote status:', req.session);
 			return null;
 		}
 
@@ -75,7 +74,6 @@ export class PostResolver {
 		const isUpdoot = value !== -1;
 		const realValue = isUpdoot ? 1 : -1;
 		const { userId } = req.session as any;
-		console.log('Userid from vote', userId);
 		const updoot = await Updoot.findOne({ where: { postId, userId } });
 
 		// the user has voted on the post before
@@ -156,7 +154,7 @@ export class PostResolver {
 
 	@Query(() => Post, { nullable: true })
 	post(@Arg('id', () => Int) id: number): Promise<Post | undefined> {
-		return Post.findOne(id);
+		return Post.findOne(id, { relations: ['creator'] });
 	}
 
 	@Mutation(() => Post)

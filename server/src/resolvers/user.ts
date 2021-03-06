@@ -125,7 +125,6 @@ export class UserResolver {
 	@Query(() => User, { nullable: true })
 	async me(@Ctx() { req }: MyContext) {
 		// Query to check who the user is
-		console.log(req.session, 'me query');
 		if (!(req.session as any).userId) {
 			return null;
 		}
