@@ -23,7 +23,6 @@ const Index = () => {
 	const [{ data, fetching }] = usePostsQuery({
 		variables,
 	});
-
 	if (!fetching && !data) {
 		return <div>You got no posts for some reason.</div>;
 	}
